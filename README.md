@@ -256,9 +256,9 @@ func _process(_delta: float) -> void:
 
 ## Implementation Highlights
 
-### [Without Training](./without_trained.gif)
+### ![Without Training](./without_trained.gif)
 
-### [After Training for 200000 timesteps, each episode being 2048 time steps long](./trained.gif)
+### ![After Training for 200000 timesteps, each episode being 2048 time steps long](./trained.gif)
 
 ### Key Design Decisions
 
