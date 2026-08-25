@@ -4,8 +4,6 @@
 
 Reinforcement learning (RL) is powerful, but integrating it into game engines isn't straightforward. Most game object AI, examples including path-finders, etc; are simple algorithm based and does not allow much flexibility.
 
-This post covers my attempt to port RL, [GDPPO](https://github.com/halfdisposal/GDPPO.git), in Godot via [MLPack](https://www.mlpack.org/) (a fast C++ ML library). You can define Proximal Policy Optimization (PPO) environments, train agents, and deploy policies all within your Godot project.
-
 ## Motivation & Use Cases
 
 **Why build this?**
