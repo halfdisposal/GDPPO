@@ -21,6 +21,10 @@ void PPO::_bind_methods() {
                           DEFVAL(0.99), DEFVAL(0.95), DEFVAL(0.0003), DEFVAL(0.001),
                           DEFVAL(false), DEFVAL(1));
     ClassDB::bind_method(D_METHOD("get_action", "state"), &PPO::get_action);
+    ClassDB::bind_method(D_METHOD("save_actor", "actor_path"), &PPO::save_actor);
+    ClassDB::bind_method(D_METHOD("save_critic", "critic_path"), &PPO::save_critic);
+    ClassDB::bind_method(D_METHOD("load_actor", "actor_path"), &PPO::load_actor);
+    ClassDB::bind_method(D_METHOD("load_critic", "critic_path"), &PPO::load_critic);
 }
 
 void PPO::build_ffn_layers(auto &network, const Array &layer_dicts) {
@@ -156,3 +160,42 @@ void PPO::train(int total_timesteps, int rollout_steps, int epochs_per_update,
         }
     }
 }
+
+bool PPO::save_actor(const String& actor_path) {
+    bool state = mlpack::Save(actor_path.utf8().get_data(), actor);
+    if (state) {
+        UtilityFunctions::print("Actor Saved at ", actor_path);
+    } else {
+        UtilityFunctions::print("Failed to Save Actor");
+    }
+    return state;
+}
+bool PPO::save_critic(const String& critic_path) {
+    bool state = mlpack::Save(critic_path.utf8().get_data(), critic);
+    if (state) {
+        UtilityFunctions::print("Critic Saved at ", critic_path);
+    } else {
+        UtilityFunctions::print("Failed to Save Critic");
+    }
+    return state;
+}
+bool PPO::load_actor(const String& actor_path) {
+    bool state = mlpack::Load(actor_path.utf8().get_data(), actor);
+    if (state) {
+        UtilityFunctions::print("Actor Loaded from ", actor_path);
+    } else {
+        UtilityFunctions::print("Failed to Load Actor");
+    }
+    return state;
+}
+
+bool PPO::load_critic(const String& critic_path) {
+    bool state = mlpack::Load(critic_path.utf8().get_data(), critic);
+    if (state) {
+        UtilityFunctions::print("Critic Loaded from ", critic_path);
+    } else {
+        UtilityFunctions::print("Failed to Load Critic");
+    }
+    return state;
+}
+

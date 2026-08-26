@@ -1,5 +1,5 @@
 #pragma once
-
+#define MLPACK_ENABLE_ANN_SERIALIZATION
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/variant/array.hpp>
 #include "../environment/environment.hpp"
@@ -28,6 +28,10 @@ class PPO : public RefCounted {
                int minibatch_size, double clip_eps, double gamma, double gae_lambda,
                double actor_lr, double critic_lr, bool print_loss, int print_every);
     int64_t get_action(const PackedFloat32Array &state);
+    bool save_actor(const String &actor_path);
+    bool save_critic(const String &critic_path);
+    bool load_actor(const String &actor_path);
+    bool load_critic(const String &critic_path);
 
   private:
     mlpack::FFN<PPOClipLoss, mlpack::RandomInitialization> actor;
