@@ -326,6 +326,6 @@ Consider:
 
 ## Conclusion
 
-Embedding RL directly into Godot opens new possibilities for adaptive game AI. This plugin is early-stage and is still under development. 
+Embedding RL directly into Godot opens new possibilities for adaptive game AI. This plugin is at early-stage and is still under development. 
 
 ---
