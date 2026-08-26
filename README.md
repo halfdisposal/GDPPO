@@ -298,6 +298,7 @@ repeat:
 - **Dense layer networks**: No CNNs or transformers (future)
 
 ### Roadmap
+- [x] Added Serealization for Saving and Loading Models
 - [ ] Asynchronous training (background thread)
 - [ ] Gym-like API for standard environments
 - [ ] Value network inspection / explainability tools
