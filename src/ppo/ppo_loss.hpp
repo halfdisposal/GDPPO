@@ -23,7 +23,7 @@ class PPOClipLoss {
             double unclipped = ratio * advantage;
             double clipped = std::clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps) * advantage;
 
-            total += -std::min(unclipped, clipped); // negative: optimizer minimizes
+            total += -std::min(unclipped, clipped);
         }
         return total / static_cast<double>(pred.n_cols);
     }
@@ -46,16 +46,12 @@ class PPOClipLoss {
             double clipped_ratio = std::clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps);
             double clipped = clipped_ratio * advantage;
 
-            // Subgradient: only the "active" (minimum) branch contributes,
-            // and the clipped branch contributes 0 once clamped (its
-            // derivative w.r.t. ratio is 0 outside the clip window).
             double d_surrogate_d_ratio = 0.0;
             if (unclipped <= clipped) {
                 d_surrogate_d_ratio = advantage;
             } else if (ratio > (1.0 - clip_eps) && ratio < (1.0 + clip_eps)) {
-                d_surrogate_d_ratio = advantage; // inside clip window, clipped branch tracks ratio
+                d_surrogate_d_ratio = advantage;
             }
-            // else: ratio clamped and clipped branch is active -> 0 gradient
 
             double d_ratio_d_prob = 1.0 / pi_old;
             double grad = -(d_surrogate_d_ratio * d_ratio_d_prob) / n;
