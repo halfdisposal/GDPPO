@@ -4,6 +4,8 @@
 
 Reinforcement learning (RL) is powerful, but integrating it into game engines isn't straightforward. Most game object AI, examples including path-finders, etc; are simple algorithm based and does not allow much flexibility.
 
+This addon [GDPPO](https://github.com/halfdisposal/GDPPO.git) is based on [MLPack](https://www.mlpack.org/) (a fast C++ ML library) and uses it as a backend for training and inference of the models.
+
 ## Motivation & Use Cases
 
 **Why build this?**
