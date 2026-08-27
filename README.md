@@ -74,7 +74,14 @@ This addon [GDPPO](https://github.com/halfdisposal/GDPPO.git) is based on [MLPac
 
 ### Installation
 
-**The Addon is still under development and security checks. Stay tuned for further updates.**
+**The Addon is still under development and security checks, API may change. Stay tuned for further updates. Only windows releases is supported for now**
+```bash
+cd godot-project
+mkdir addons
+cd addons
+git clone https://github.com/halfdisposal/GDPPO.git
+```
+Download the latest release and unzip it in the GDPPO folder.
 
 ## Building Your First Agent
 
