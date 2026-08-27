@@ -1,4 +1,22 @@
-# Reinforcement Learning in Godot: Building a PPO Plugin with MLPack
+# GDPPO - Reinforcement Learning in Godot
+**Keywords**: Godot 4, PPO, Reinforcement Learning, Game AI, MLPack
+<!-- Stars -->
+[![GitHub stars](https://img.shields.io/github/stars/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/stargazers)
+
+<!-- Forks -->
+[![GitHub forks](https://img.shields.io/github/forks/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/network/members)
+
+<!-- Issues -->
+[![GitHub issues](https://img.shields.io/github/issues/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/issues)
+
+<!-- Watchers -->
+[![GitHub watchers](https://img.shields.io/github/watchers/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/watchers)
+
+<!-- Size -->
+[![GitHub repo size](https://img.shields.io/github/repo-size/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO)
+
+<!-- Last commit -->
+[![GitHub last commit](https://img.shields.io/github/last-commit/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/commits/main)
 
 ## Introduction
 
