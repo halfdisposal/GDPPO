@@ -7,8 +7,6 @@
 
 
 # GDPPO - Reinforcement Learning in Godot
-**Keywords**: Godot 4, PPO, Reinforcement Learning, Game AI, MLPack
-
 
 
 ## Introduction
@@ -341,3 +339,4 @@ Consider:
 Embedding RL directly into Godot opens new possibilities for adaptive game AI. This plugin is at early-stage and is still under development. 
 
 ---
+**Keywords**: Godot 4, PPO, Reinforcement Learning, Game AI, MLPack
