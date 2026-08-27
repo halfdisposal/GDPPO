@@ -4,6 +4,7 @@
 [![GitHub watchers](https://img.shields.io/github/watchers/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/watchers)
 [![GitHub repo size](https://img.shields.io/github/repo-size/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO)
 [![GitHub last commit](https://img.shields.io/github/last-commit/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/commits/main)
+[![Views Badge](https://views.whatilearened.today/views/github/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO)
 
 [![C++](https://img.shields.io/badge/language-C++-blue.svg)](https://isocpp.org/)
 [![GDScript](https://img.shields.io/badge/language-GDScript-blue.svg)](https://docs.godotengine.org/en/stable/getting_started/scripting/gdscript/index.html)
