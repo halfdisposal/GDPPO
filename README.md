@@ -58,7 +58,7 @@ This addon [GDPPO](https://github.com/halfdisposal/GDPPO.git) is based on [MLPac
 | Component | Responsibility |
 |-----------|-----------------|
 | `PPOEnvironment` | GDScript base class; child implements overloads `_step()`, `_reset()`, `_state()`, `_get_state_dims()`, `_get_action_dims()` |
-| `PPO` | Godot RefObject wrapping MLPack's PPO algorithm |
+| `PPO` | Godot Node (**previously**RefObject) wrapping MLPack's PPO algorithm |
 | `MLPack bindings` | C++ layer exposing model architecture, training, inference |
 
 ### Supported Architecture
@@ -176,8 +176,8 @@ extends Node2D
 const PIXELS_PER_METER := 100.0
 
 # Initialize the Environment and Model
-@onready var env := CartPoleEnv.new()
-@onready var ppo := PPO.new()
+@onready var env := $CartPoleEnv
+@onready var ppo := $PPO
 
 # Access GUI Elements
 @onready var cart: Node2D = $Cart
@@ -278,7 +278,7 @@ func _process(_delta: float) -> void:
 
 ### Key Design Decisions
 
-1. **RefObject-based**: PPO and PPOEnvironment inherit from RefObject for Godot's lifecycle management
+1. **Node-based**: PPO and PPOEnvironment inherit from Node (**previously** RefObject) for Godot's lifecycle management
 2. **PackedFloat32Array**: Used for state/action tensors (efficient C++ interop)
 
 ---
