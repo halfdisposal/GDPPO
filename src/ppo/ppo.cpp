@@ -2,6 +2,7 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/classes/object.hpp>
 #include <mlpack/methods/ann/layer/linear.hpp>
 #include <mlpack/methods/ann/layer/softmax.hpp>
 
@@ -54,8 +55,21 @@ bool PPO::build(const Array &actor_layers, const Array &critic_layers) {
     return true;
 }
 
-void PPO::set_environment(Ref<PPOEnvironment> p_env) {
-    env = p_env;
+void PPO::set_environment(Node *p_env) {
+    env = Object::cast_to<PPOEnvironment>(p_env);
+    if (env == nullptr) {
+        UtilityFunctions::print("PPO::set_environment: node is not a PPOEnvironment");
+        env_instance_id = 0;
+        return;
+    }
+    env_instance_id = env->get_instance_id();
+}
+
+bool PPO::env_is_valid() const {
+    if (env == nullptr || env_instance_id == 0) {
+        return false;
+    }
+    return UtilityFunctions::is_instance_id_valid(static_cast<int64_t>(env_instance_id));
 }
 
 arma::vec PPO::forward_actor_probs(const arma::vec &state) {
@@ -76,8 +90,8 @@ int64_t PPO::get_action(const PackedFloat32Array &state) {
 void PPO::train(int total_timesteps, int rollout_steps, int epochs_per_update,
                  int minibatch_size, double clip_eps, double gamma, double gae_lambda,
                  double actor_lr, double critic_lr, bool print_loss, int print_every) {
-    if (!built || env.is_null()) {
-        UtilityFunctions::print("PPO::train called before build()/set_environment()");
+    if (!built || !env_is_valid()) {
+        UtilityFunctions::print("PPO::train called before build()/set_environment(), or environment was freed");
         return;
     }
 
@@ -88,14 +102,24 @@ void PPO::train(int total_timesteps, int rollout_steps, int epochs_per_update,
     PackedFloat32Array cur_state = env->reset();
 
     while (collected < total_timesteps) {
+        if (!env_is_valid()) {
+            UtilityFunctions::print("PPO::train: environment was freed mid-training, stopping");
+            return;
+        }
+
         arma::mat states(state_dims, static_cast<arma::uword>(rollout_steps));
-        std::vector<int> actions(static_cast<cereal::size_type>(rollout_steps));
-        std::vector<double> log_probs(static_cast<cereal::size_type>(rollout_steps));
-        std::vector<double> rewards(static_cast<cereal::size_type>(rollout_steps));
-        std::vector<double> values(static_cast<cereal::size_type>(rollout_steps));
-        std::vector<bool> dones(static_cast<cereal::size_type>(rollout_steps));
+        std::vector<int> actions(static_cast<size_t>(rollout_steps));
+        std::vector<double> log_probs(static_cast<size_t>(rollout_steps));
+        std::vector<double> rewards(static_cast<size_t>(rollout_steps));
+        std::vector<double> values(static_cast<size_t>(rollout_steps));
+        std::vector<bool> dones(static_cast<size_t>(rollout_steps));
 
         for (int t = 0; t < rollout_steps; ++t) {
+            if (!env_is_valid()) {
+                UtilityFunctions::print("PPO::train: environment was freed mid-rollout, stopping");
+                return;
+            }
+
             arma::vec s(state_dims);
             for (size_t i = 0; i < state_dims; ++i) s.at(i) = cur_state[static_cast<int>(i)];
             states.col(static_cast<arma::uword>(t)) = s;
@@ -103,31 +127,31 @@ void PPO::train(int total_timesteps, int rollout_steps, int epochs_per_update,
             arma::vec probs = forward_actor_probs(s);
             std::discrete_distribution<int> dist(probs.begin(), probs.end());
             int action = dist(rng);
-            actions[static_cast<arma::uword>(t)] = action;
-            log_probs[static_cast<arma::uword>(t)] = std::log(std::max(probs.at(static_cast<size_t>(action)), 1e-8));
+            actions[static_cast<size_t>(t)] = action;
+            log_probs[static_cast<size_t>(t)] = std::log(std::max(probs.at(static_cast<size_t>(action)), 1e-8));
 
             arma::mat v_out;
             critic.Predict(s, v_out);
-            values[static_cast<arma::uword>(t)] = v_out.at(0, 0);
+            values[static_cast<size_t>(t)] = v_out.at(0, 0);
 
             Dictionary step_result = env->step(action);
-            rewards[static_cast<arma::uword>(t)] = static_cast<double>(step_result.get("reward", 0.0));
-            dones[static_cast<arma::uword>(t)] = static_cast<bool>(step_result.get("done", false));
+            rewards[static_cast<size_t>(t)] = static_cast<double>(step_result.get("reward", 0.0));
+            dones[static_cast<size_t>(t)] = static_cast<bool>(step_result.get("done", false));
             cur_state = step_result.get("state", cur_state);
 
-            if (dones[static_cast<arma::uword>(t)]) cur_state = env->reset();
+            if (dones[static_cast<size_t>(t)]) cur_state = env->reset();
         }
 
         std::vector<double> advantages(static_cast<size_t>(rollout_steps)), returns(static_cast<size_t>(rollout_steps));
         double gae = 0.0;
-        double next_value = 0.0; 
+        double next_value = 0.0;
         for (int t = rollout_steps - 1; t >= 0; --t) {
-            double mask = dones[static_cast<arma::uword>(t)] ? 0.0 : 1.0;
-            double delta = rewards[static_cast<arma::uword>(t)] + gamma * next_value * mask - values[static_cast<arma::uword>(t)];
+            double mask = dones[static_cast<size_t>(t)] ? 0.0 : 1.0;
+            double delta = rewards[static_cast<size_t>(t)] + gamma * next_value * mask - values[static_cast<size_t>(t)];
             gae = delta + gamma * gae_lambda * mask * gae;
-            advantages[static_cast<arma::uword>(t)] = gae;
-            returns[static_cast<arma::uword>(t)] = advantages[static_cast<arma::uword>(t)] + values[static_cast<arma::uword>(t)];
-            next_value = values[static_cast<arma::uword>(t)];
+            advantages[static_cast<size_t>(t)] = gae;
+            returns[static_cast<size_t>(t)] = advantages[static_cast<size_t>(t)] + values[static_cast<size_t>(t)];
+            next_value = values[static_cast<size_t>(t)];
         }
 
         arma::vec adv_vec(advantages);
@@ -138,10 +162,10 @@ void PPO::train(int total_timesteps, int rollout_steps, int epochs_per_update,
         arma::mat actor_target(3, static_cast<arma::uword>(rollout_steps));
         arma::mat critic_target(1, static_cast<arma::uword>(rollout_steps));
         for (int t = 0; t < rollout_steps; ++t) {
-            actor_target.at(0, static_cast<arma::uword>(t)) = static_cast<double>(actions[static_cast<arma::uword>(t)]);
-            actor_target.at(1, static_cast<arma::uword>(t)) = log_probs[static_cast<arma::uword>(t)];
-            actor_target.at(2, static_cast<arma::uword>(t)) = advantages[static_cast<arma::uword>(t)];
-            critic_target.at(0, static_cast<arma::uword>(t)) = returns[static_cast<arma::uword>(t)];
+            actor_target.at(0, static_cast<arma::uword>(t)) = static_cast<double>(actions[static_cast<size_t>(t)]);
+            actor_target.at(1, static_cast<arma::uword>(t)) = log_probs[static_cast<size_t>(t)];
+            actor_target.at(2, static_cast<arma::uword>(t)) = advantages[static_cast<size_t>(t)];
+            critic_target.at(0, static_cast<arma::uword>(t)) = returns[static_cast<size_t>(t)];
         }
 
         ens::Adam actor_opt(actor_lr, static_cast<size_t>(minibatch_size), 0.9, 0.999, 1e-8,
@@ -149,53 +173,34 @@ void PPO::train(int total_timesteps, int rollout_steps, int epochs_per_update,
         ens::Adam critic_opt(critic_lr, static_cast<size_t>(minibatch_size), 0.9, 0.999, 1e-8,
                               static_cast<size_t>(rollout_steps * epochs_per_update), 1e-8, true);
 
-        GodotLossCallback callback(print_loss, static_cast<size_t>(print_every));
+        GodotLossCallback callback(false, static_cast<size_t>(print_every));
         actor.Train(states, actor_target, actor_opt, callback);
         critic.Train(states, critic_target, critic_opt);
 
         collected += rollout_steps;
         update++;
         if (print_loss) {
-            UtilityFunctions::print("[PPO] update ", update, " timesteps ", collected);
+            UtilityFunctions::print("[PPO] update ", update, " timesteps ", collected, " last reward ", rewards.back());
         }
     }
 }
 
-bool PPO::save_actor(const String& actor_path) {
+bool PPO::save_actor(const String &actor_path) {
     bool state = mlpack::Save(actor_path.utf8().get_data(), actor);
-    if (state) {
-        UtilityFunctions::print("Actor Saved at ", actor_path);
-    } else {
-        UtilityFunctions::print("Failed to Save Actor");
-    }
     return state;
 }
-bool PPO::save_critic(const String& critic_path) {
+
+bool PPO::save_critic(const String &critic_path) {
     bool state = mlpack::Save(critic_path.utf8().get_data(), critic);
-    if (state) {
-        UtilityFunctions::print("Critic Saved at ", critic_path);
-    } else {
-        UtilityFunctions::print("Failed to Save Critic");
-    }
     return state;
 }
-bool PPO::load_actor(const String& actor_path) {
+
+bool PPO::load_actor(const String &actor_path) {
     bool state = mlpack::Load(actor_path.utf8().get_data(), actor);
-    if (state) {
-        UtilityFunctions::print("Actor Loaded from ", actor_path);
-    } else {
-        UtilityFunctions::print("Failed to Load Actor");
-    }
     return state;
 }
 
-bool PPO::load_critic(const String& critic_path) {
+bool PPO::load_critic(const String &critic_path) {
     bool state = mlpack::Load(critic_path.utf8().get_data(), critic);
-    if (state) {
-        UtilityFunctions::print("Critic Loaded from ", critic_path);
-    } else {
-        UtilityFunctions::print("Failed to Load Critic");
-    }
     return state;
 }
-

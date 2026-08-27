@@ -1,6 +1,6 @@
 #pragma once
 #define MLPACK_ENABLE_ANN_SERIALIZATION
-#include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/variant/array.hpp>
 #include "../environment/environment.hpp"
 #include "../model/model_backend.hpp"
@@ -12,8 +12,8 @@
 
 namespace godot {
 
-class PPO : public RefCounted {
-    GDCLASS(PPO, RefCounted)
+class PPO : public Node {
+    GDCLASS(PPO, Node)
 
   protected:
     static void _bind_methods();
@@ -23,7 +23,7 @@ class PPO : public RefCounted {
     ~PPO();
 
     bool build(const Array &actor_layers, const Array &critic_layers);
-    void set_environment(Ref<PPOEnvironment> p_env);
+    void set_environment(Node *p_env);
     void train(int total_timesteps, int rollout_steps, int epochs_per_update,
                int minibatch_size, double clip_eps, double gamma, double gae_lambda,
                double actor_lr, double critic_lr, bool print_loss, int print_every);
@@ -36,10 +36,12 @@ class PPO : public RefCounted {
   private:
     mlpack::FFN<PPOClipLoss, mlpack::RandomInitialization> actor;
     mlpack::FFN<mlpack::MeanSquaredError, mlpack::RandomInitialization> critic;
-    Ref<PPOEnvironment> env;
+    PPOEnvironment *env = nullptr;
+    uint64_t env_instance_id = 0;
     std::mt19937 rng{std::random_device{}()};
     bool built = false;
 
+    bool env_is_valid() const;
     void build_ffn_layers(auto &network, const Array &layer_dicts);
     arma::vec forward_actor_probs(const arma::vec &state);
 };
