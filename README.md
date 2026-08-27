@@ -1,3 +1,4 @@
+# GDPPO - Reinforcement Learning in Godot
 [![GitHub stars](https://img.shields.io/github/stars/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/network/members)
 [![GitHub issues](https://img.shields.io/github/issues/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/issues)
@@ -11,8 +12,7 @@
 [![Godot](https://img.shields.io/badge/engine-Godot%204-478CBF.svg)](https://godotengine.org/)
 [![MLPack](https://img.shields.io/badge/backend-MLPack-red.svg)](https://www.mlpack.org/) 
 
-# GDPPO - Reinforcement Learning in Godot
-
+Reinforcement Learning (PPO) directly in Godot, powered by MLPack.
 
 ## Introduction
 
