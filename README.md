@@ -83,6 +83,101 @@ git clone https://github.com/halfdisposal/GDPPO.git
 ```
 Download the latest release and unzip it in the GDPPO folder.
 
+## Dependencies
+
+GDPPO links against [mlpack](https://www.mlpack.org/) for the neural network backend and [Armadillo](http://arma.sourceforge.net/) (with a BLAS/LAPACK implementation) for linear algebra. These are **not vendored** in this repo — you'll need to install them yourself before building from source.
+
+If you only want to *use* GDPPO in a Godot project (not build it), skip this section and grab a prebuilt release from the [Releases](../../releases) page instead.
+
+### Required
+
+| Dependency | Type | Notes |
+|---|---|---|
+| [mlpack](https://github.com/mlpack/mlpack) | header-only | ML backend (FFN, layers, loss functions) |
+| [ensmallen](https://github.com/mlpack/ensmallen) | header-only | Optimizers (Adam, etc.) — mlpack's own dependency |
+| [cereal](https://github.com/USCiLab/cereal) | header-only | Serialization — used for model save/load |
+| [Armadillo](http://arma.sourceforge.net/) | compiled library | Linear algebra — mlpack's core dependency |
+| A BLAS/LAPACK implementation | compiled library | OpenBLAS recommended — Armadillo links against this |
+| [godot-cpp](https://github.com/godotengine/godot-cpp) | git submodule | Already included via `git submodule update --init` |
+| [SCons](https://scons.org/) | build tool | `pip install scons` |
+| C++20-capable compiler | toolchain | clang or GCC; MSVC untested |
+
+mlpack, ensmallen, and cereal are header-only, so "installing" them just means having their headers somewhere the compiler can find — cloning them locally and pointing `scons` at the path works fine, no build step required for those three.
+
+### Windows (MSYS2 / UCRT64)
+
+This is the environment GDPPO was originally developed against.
+
+```bash
+pacman -S mingw-w64-ucrt-x86_64-armadillo \
+          mingw-w64-ucrt-x86_64-openblas \
+          mingw-w64-ucrt-x86_64-clang \
+          mingw-w64-ucrt-x86_64-lld
+```
+
+`armadillo` pulls in `arpack` and `superlu` as dependencies automatically. If you hit `Error 126` / "module could not be found" when loading the compiled `.dll` in Godot, it means one of Armadillo's runtime dependencies isn't on your `PATH` — copy the relevant `.dll`s from `C:\msys64\ucrt64\bin\` into `addons/GDPPO/bin/` alongside the extension's own `.dll`. Use `objdump -p bin\libgdppo.windows.*.dll | grep "DLL Name"` to see exactly which ones your build actually links against; [Dependencies.exe](https://github.com/lucasg/Dependencies) is a faster way to see the full transitive chain in one pass if you're chasing more than one missing DLL.
+
+mlpack, ensmallen, and cereal aren't in the MSYS2 repos as of writing — clone them manually:
+
+```bash
+git clone --depth 1 https://github.com/mlpack/mlpack.git deps/mlpack
+git clone --depth 1 https://github.com/mlpack/ensmallen.git deps/ensmallen
+git clone --depth 1 https://github.com/USCiLab/cereal.git deps/cereal
+```
+
+Then build:
+
+```bash
+scons platform=windows target=template_release \
+    mlpack_include=deps/mlpack/src \
+    ensmallen_include=deps/ensmallen/include \
+    cereal_include=deps/cereal/include
+```
+
+### Linux (Debian / Ubuntu)
+
+```bash
+sudo apt-get install libarmadillo-dev libopenblas-dev
+git clone --depth 1 https://github.com/mlpack/mlpack.git deps/mlpack
+git clone --depth 1 https://github.com/mlpack/ensmallen.git deps/ensmallen
+git clone --depth 1 https://github.com/USCiLab/cereal.git deps/cereal
+
+scons platform=linux target=template_release \
+    mlpack_include=deps/mlpack/src \
+    ensmallen_include=deps/ensmallen/include \
+    cereal_include=deps/cereal/include
+```
+
+Some distributions package mlpack directly (`libmlpack-dev` on recent Ubuntu/Debian) — if available for your distro, you can skip the manual clone and omit `mlpack_include` entirely, letting the compiler find it on the default system path.
+
+### macOS
+
+```bash
+brew install armadillo
+git clone --depth 1 https://github.com/mlpack/mlpack.git deps/mlpack
+git clone --depth 1 https://github.com/mlpack/ensmallen.git deps/ensmallen
+git clone --depth 1 https://github.com/USCiLab/cereal.git deps/cereal
+
+scons platform=macos target=template_release \
+    mlpack_include=deps/mlpack/src \
+    ensmallen_include=deps/ensmallen/include \
+    cereal_include=deps/cereal/include
+```
+
+Homebrew's Armadillo links against Apple's Accelerate framework for BLAS/LAPACK by default, which the SConstruct already accounts for (`FRAMEWORKS=["Accelerate"]`) — no separate OpenBLAS install needed on macOS.
+
+### godot-cpp
+
+```bash
+git submodule update --init --recursive
+```
+
+### Verifying your setup
+
+After installing dependencies, a clean build should produce a shared library under `addons/GDPPO/bin/`. If `scons` fails with a "no such file" error on an mlpack/armadillo/ensmallen header, double-check the relevant `*_include` path was passed correctly — the SConstruct doesn't vendor or auto-discover these paths beyond your system's default compiler search paths.
+
+If you hit a build or link error not covered here, please open an issue with your platform, compiler version, and the full error output.
+
 ## Building Your First Agent
 
 ### Step 1: Define the Environment
