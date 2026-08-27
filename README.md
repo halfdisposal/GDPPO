@@ -8,7 +8,7 @@
 [![C++](https://img.shields.io/badge/language-C++-blue.svg)](https://isocpp.org/)
 [![GDScript](https://img.shields.io/badge/language-GDScript-blue.svg)](https://docs.godotengine.org/en/stable/getting_started/scripting/gdscript/index.html)
 [![Godot](https://img.shields.io/badge/engine-Godot%204-478CBF.svg)](https://godotengine.org/)
-[![MLPack](https://img.shields.io/badge/backend-MLPack-red.svg)](https://www.mlpack.org/)
+[![MLPack](https://img.shields.io/badge/backend-MLPack-red.svg)](https://www.mlpack.org/) 
 
 # GDPPO - Reinforcement Learning in Godot
 
