@@ -186,7 +186,7 @@ If you hit a build or link error not covered here, please open an issue with you
 Extend `PPOEnvironment` and implement the required methods:
 
 ```gdscript
-extends PPOEnvironment # Make Sure to extend this RefCounted Object
+extends PPOEnvironment # Make Sure to extend this Node
 class_name CartPoleEnv
 
 # Define the Environment Parameters
