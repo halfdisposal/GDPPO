@@ -1,4 +1,5 @@
 # GDPPO - Reinforcement Learning in Godot
+<p align="center"><img src="icon.svg" width="160" height="160" alt="GDPPO Logo"></p>
 [![GitHub stars](https://img.shields.io/github/stars/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/network/members)
 [![GitHub issues](https://img.shields.io/github/issues/halfdisposal/GDPPO.svg)](https://github.com/halfdisposal/GDPPO/issues)
