@@ -415,7 +415,6 @@ repeat:
 - **PPO only**: No DQN, A3C, or other algorithms yet
 - **Single-threaded training**: Blocks game loop during training, can be run on different thread during training but needs to be undisturbed until trained
 - **No batch inference**: One prediction at a time
-- **Dense layer networks**: No CNNs or transformers (future)
 
 ### Roadmap
 - [x] Added Serealization for Saving and Loading Models
