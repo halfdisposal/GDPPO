@@ -21,6 +21,8 @@ namespace godot {
         OUTPUT_LAYER,
         ACTIVATION_LAYER,
         LINEAR_LAYER,
+        CONV2D_LAYER,
+        MAXPOOL2D_LAYER,
     };
     enum LOSS {
         MSE,
@@ -33,6 +35,12 @@ namespace godot {
         size_t in_dims = 0;
         size_t out_dims = 0;
         ACTIVATION activation = ACTIVATION::NONE;
+
+        size_t kernel_w = 3, kernel_h = 3;
+        size_t stride_w = 1, stride_h = 1;
+        size_t pad_w = 0, pad_h = 0;
+        bool floor = true;
+        size_t input_width = 0, input_height = 0, input_channels = 1;
     };
 }
 

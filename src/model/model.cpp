@@ -2,6 +2,7 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+#include <exception>
 
 using namespace godot;
 
@@ -21,6 +22,8 @@ void FFN::_bind_methods() {
     BIND_ENUM_CONSTANT(OUTPUT_LAYER);
     BIND_ENUM_CONSTANT(ACTIVATION_LAYER);
     BIND_ENUM_CONSTANT(LINEAR_LAYER);
+    BIND_ENUM_CONSTANT(CONV2D_LAYER);
+    BIND_ENUM_CONSTANT(MAXPOOL2D_LAYER);
 
     BIND_ENUM_CONSTANT(MSE);
     BIND_ENUM_CONSTANT(CROSSENTROPY);
@@ -44,6 +47,17 @@ bool FFN::build_from_dictionary_array(const Array &layer_dicts, int loss_type) {
         spec.layer_id = static_cast<LAYER>(static_cast<int>(d.get("layer_id", -1)));
         spec.in_dims = static_cast<size_t>(static_cast<int64_t>(d.get("in_dims", 0)));
         spec.out_dims = static_cast<size_t>(static_cast<int64_t>(d.get("out_dims", 0)));
+        
+        spec.kernel_w = static_cast<size_t>(static_cast<int64_t>(d.get("kernal_w", 3)));
+        spec.kernel_h = static_cast<size_t>(static_cast<int64_t>(d.get("kernal_h", 3)));
+        spec.stride_w = static_cast<size_t>(static_cast<int64_t>(d.get("stride_w", 1)));
+        spec.stride_h = static_cast<size_t>(static_cast<int64_t>(d.get("stride_h", 1)));
+        spec.pad_w = static_cast<size_t>(static_cast<int64_t>(d.get("pad_w", 0)));
+        spec.pad_h = static_cast<size_t>(static_cast<int64_t>(d.get("pad_h", 0)));
+        spec.floor = static_cast<bool>(d.get("floor", true));
+        spec.input_width = static_cast<size_t>(static_cast<int64_t>(d.get("input_width", 0)));
+        spec.input_height = static_cast<size_t>(static_cast<int64_t>(d.get("input_height", 0)));
+        spec.input_channels = static_cast<size_t>(static_cast<int64_t>(d.get("input_channels", 0)));
         layers.push_back(spec);
     }
 
@@ -107,8 +121,12 @@ void FFN::train(const TypedArray<PackedFloat32Array> &inputs, const TypedArray<P
     config.print_every = static_cast<size_t>(print_every);
     config.tolerance = tolerance;
     config.shuffle = shuffle;
-
-    backend->Train(X, Y, config, use_optimizer);
+    try {
+        backend->Train(X, Y, config, use_optimizer);
+    } catch (std::exception &e) {
+        String e_id(e.what());
+        UtilityFunctions::print("MODEL: ", e_id);
+    }
 } 
 
 PackedFloat32Array FFN::predict(const PackedFloat32Array &input) {

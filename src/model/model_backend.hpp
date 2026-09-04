@@ -61,11 +61,29 @@ template <typename LossT>
 class ModelBackend: public IModelBackend {
     public:
     explicit ModelBackend(const std::vector<LayerNode> &layers) {
+        bool input_dims_set = false;
         for (size_t i = 0; i < layers.size(); ++i) {
             const LayerNode &layer = layers.at(i);
 
             if (layer.layer_id == LAYER::LINEAR_LAYER) {
                 network.template Add<mlpack::Linear<>>(layer.out_dims);
+            } else if (layer.layer_id == LAYER::CONV2D_LAYER) {
+                if (!input_dims_set) {
+                    network.InputDimensions() = {layer.input_width, layer.input_height, layer.input_channels};
+                    input_dims_set = true;
+                }
+                network.template Add<mlpack::Convolution<>>(
+                    layer.out_dims,
+                    layer.kernel_w, layer.kernel_h,
+                    layer.stride_w, layer.stride_h,
+                    layer.pad_w, layer.pad_h
+                );
+            } else if (layer.layer_id == LAYER::MAXPOOL2D_LAYER) {
+                network.template Add<mlpack::MaxPooling<>>(
+                    layer.kernel_w, layer.kernel_h,
+                    layer.stride_w, layer.stride_h,
+                    layer.floor
+                );
             } else if (layer.layer_id == LAYER::ACTIVATION_LAYER) {
                 switch (layer.activation) {
                     case godot::ACTIVATION::RELU:
@@ -94,6 +112,7 @@ class ModelBackend: public IModelBackend {
         }
     }
     void Train(const arma::mat &inputs, const arma::mat &targets, const TrainConfig &config, const bool use_optimizer) override {
+        try {
         if (use_optimizer) {
             ens::Adam optimizer(
                 config.learning_rate,
@@ -111,19 +130,20 @@ class ModelBackend: public IModelBackend {
         } else {
             network.Train(inputs, targets);
         }
+    } catch (std::exception &e) {
+        UtilityFunctions::print("BACKEND", String(e.what()));
+    }
     }
     void Predict(const arma::mat &input, arma::mat &output) override {
         network.Predict(input, output);
     }
     bool Save(const std::string &path) override {
-        bool success = mlpack::data::Save(path, "airnn_model", network);
-        UtilityFunctions::print("Model Saved to ", String(path.c_str()));
+        bool success = mlpack::Save(path, network);
         return success;
     }
 
     bool Load(const std::string &path) override {
-        bool success = mlpack::data::Load(path, "airnn_model", network);
-        UtilityFunctions::print("Model Loaded from ", String(path.c_str()));
+        bool success = mlpack::Load(path, network);
         return success;
     }
     private:
