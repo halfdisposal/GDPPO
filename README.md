@@ -66,10 +66,11 @@ This addon [GDPPO](https://github.com/halfdisposal/GDPPO.git) is based on [MLPac
 
 ### Supported Architecture
 
-- **Layers**: Linear (fully connected)
+- **Layers**: Linear (fully connected), Convolution, Maxpool
 - **Activations**: ReLU, Sigmoid, tanh, Leaky ReLU, softmax, logsoftmax
 - **Algorithm**: PPO (Proximal Policy Optimization)
 - **Inference**: Single-step policy evaluation, batch inference
+- **Errors**: MSE, Crossentropy, NegativeLogLikelihood
 
 ---
 
@@ -418,6 +419,7 @@ repeat:
 
 ### Roadmap
 - [x] Added Serealization for Saving and Loading Models
+- [x] Added Convolution Layers and Maxpool Layers
 - [ ] Asynchronous training (background thread)
 - [ ] Gym-like API for standard environments
 - [ ] Value network inspection / explainability tools
