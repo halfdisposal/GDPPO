@@ -27,6 +27,7 @@ class FFN : public Node {
     PackedFloat32Array predict(const PackedFloat32Array &input);
     bool save_model(const String &path);
     bool load_model(const String &path, int loss_type);
+    static PackedFloat32Array image_to_packedarray(const Ref<Image> &image, int channels);
 
   private:
     std::unique_ptr<IModelBackend> backend;
