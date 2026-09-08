@@ -35,6 +35,7 @@ void FFN::_bind_methods() {
     ClassDB::bind_method(D_METHOD("predict", "input"), &FFN::predict);
     ClassDB::bind_method(D_METHOD("save_model", "path"), &FFN::save_model);
     ClassDB::bind_method(D_METHOD("load_model", "path", "loss_type"), &FFN::load_model);
+    ClassDB::bind_static_method("FFN", D_METHOD("image_to_packedarray", "image", "channels"), &FFN::image_to_packedarray);
 }
 
 bool FFN::build_from_dictionary_array(const Array &layer_dicts, int loss_type) {
@@ -167,4 +168,54 @@ bool FFN::load_model(const String &path, int loss_type) {
         backend = std::make_unique<ModelBackend<mlpack::MeanSquaredError>>(empty_layers);
     }
     return backend->Load(std::string(path.utf8().get_data()));
+}
+PackedFloat32Array FFN::image_to_packedarray(const Ref<Image> &image, int channels) {
+    PackedFloat32Array result;
+
+    if (image.is_null()) {
+        UtilityFunctions::print("FFN::image_to_packedarray: image is null");
+        return result;
+    }
+
+    Ref<Image> img = image->duplicate();
+
+    switch (channels) {
+        case 1:
+            img->convert(Image::FORMAT_L8);
+            break;
+        case 3:
+            img->convert(Image::FORMAT_RGB8);
+            break;
+        case 4:
+            img->convert(Image::FORMAT_RGBA8);
+            break;
+        default:
+            UtilityFunctions::print("FFN::image_to_packedarray: unsupported channel count ", channels, " (expected 1, 3, or 4)");
+            return result;
+    }
+
+    int width = img->get_width();
+    int height = img->get_height();
+
+    result.resize(static_cast<int64_t>(width) * height * channels);
+
+    for (int ch = 0; ch < channels; ++ch) {
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                Color pixel = img->get_pixel(x, y);
+                float value = 0.0f;
+                switch (ch) {
+                    case 0: value = pixel.r; break;
+                    case 1: value = pixel.g; break;
+                    case 2: value = pixel.b; break;
+                    case 3: value = pixel.a; break;
+                    default: value = 0.0f;
+                }
+                int index = x + y * width + ch * width * height;
+                result[index] = value;
+            }
+        }
+    }
+
+    return result;
 }
