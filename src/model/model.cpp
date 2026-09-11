@@ -1,5 +1,6 @@
 #include "model.hpp"
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <exception>
@@ -31,14 +32,70 @@ void FFN::_bind_methods() {
 
 
     ClassDB::bind_method(D_METHOD("build_from_dictionary_array", "layer_dicts", "loss_type"), &FFN::build_from_dictionary_array);
+    ClassDB::bind_method(D_METHOD("add", "layer_id", "out_dims", "activation",
+                                  "kernel_w", "kernel_h", "stride_w", "stride_h",
+                                  "pad_w", "pad_h", "floor",
+                                  "input_width", "input_height", "input_channels"), 
+                         &FFN::add, 
+                         DEFVAL(static_cast<int>(NONE)), DEFVAL(3), DEFVAL(3), DEFVAL(1), DEFVAL(1),
+                         DEFVAL(0), DEFVAL(0), DEFVAL(true), DEFVAL(1), DEFVAL(1), DEFVAL(1));
+    ClassDB::bind_method(D_METHOD("build", "loss_type"), &FFN::build);
     ClassDB::bind_method(D_METHOD("train", "inputs", "targets", "use_optimizer", "epochs", "learning_rate", "beta1", "beta2", "batch_size", "print_loss", "print_every", "tolerance", "shuffle"), &FFN::train, DEFVAL(true), DEFVAL(100), DEFVAL(0.001), DEFVAL(0.9), DEFVAL(0.999), DEFVAL(32), DEFVAL(false), DEFVAL(10), DEFVAL(1e-8), DEFVAL(true));
     ClassDB::bind_method(D_METHOD("predict", "input"), &FFN::predict);
     ClassDB::bind_method(D_METHOD("save_model", "path"), &FFN::save_model);
     ClassDB::bind_method(D_METHOD("load_model", "path", "loss_type"), &FFN::load_model);
+    ClassDB::bind_method(D_METHOD("summary"), &FFN::summary);
     ClassDB::bind_static_method("FFN", D_METHOD("image_to_packedarray", "image", "channels"), &FFN::image_to_packedarray);
 }
 
+static bool check_layers_dictionary(const Array &layer_dicts) {
+    for (int i = 0; i < layer_dicts.size(); ++i) {
+        Dictionary d = layer_dicts[i];
+        if (!d.has("layer_id")) {
+            return false;
+        }
+        switch (static_cast<int>(d.get("layer_id", -1))) {
+            case LINEAR_LAYER:
+                if (!d.has("out_dims")) {
+                    return false;
+                }
+                break;
+            case ACTIVATION_LAYER:
+                if (!d.has("activation")) {
+                    return false;
+                }
+                break;
+            case CONV2D_LAYER:
+                if ((!d.has("kernel_w")) || (!d.has("kernel_h")) ||
+                    (!d.has("stride_w")) || (!d.has("stride_h")) ||
+                    (!d.has("pad_w")) || (!d.has("pad_h")) || (!d.has("out_dims"))
+                ) {
+                    return false;
+                }
+                break;
+            case MAXPOOL2D_LAYER:
+                if ((!d.has("kernel_w")) || (!d.has("kernel_h")) ||
+                    (!d.has("stride_w")) || (!d.has("stride_h")) ||
+                    (!d.has("floor"))
+                ) {
+                    return false;
+                }
+                break;
+            case INPUT_LAYER:
+            case OUTPUT_LAYER:
+                break;
+            default:
+                return false;
+        }
+    }
+    return true;
+}
+
 bool FFN::build_from_dictionary_array(const Array &layer_dicts, int loss_type) {
+    if (!check_layers_dictionary(layer_dicts)) {
+        UtilityFunctions::print(" build_from_dictionary_array(): invalid layer dictionary array");
+        return false;
+    }
     std::vector<LayerNode> layers;
     layers.reserve(static_cast<size_t>(layer_dicts.size()));
 
@@ -49,8 +106,8 @@ bool FFN::build_from_dictionary_array(const Array &layer_dicts, int loss_type) {
         spec.in_dims = static_cast<size_t>(static_cast<int64_t>(d.get("in_dims", 0)));
         spec.out_dims = static_cast<size_t>(static_cast<int64_t>(d.get("out_dims", 0)));
         
-        spec.kernel_w = static_cast<size_t>(static_cast<int64_t>(d.get("kernal_w", 3)));
-        spec.kernel_h = static_cast<size_t>(static_cast<int64_t>(d.get("kernal_h", 3)));
+        spec.kernel_w = static_cast<size_t>(static_cast<int64_t>(d.get("kernel_w", 3)));
+        spec.kernel_h = static_cast<size_t>(static_cast<int64_t>(d.get("kernel_h", 3)));
         spec.stride_w = static_cast<size_t>(static_cast<int64_t>(d.get("stride_w", 1)));
         spec.stride_h = static_cast<size_t>(static_cast<int64_t>(d.get("stride_h", 1)));
         spec.pad_w = static_cast<size_t>(static_cast<int64_t>(d.get("pad_w", 0)));
@@ -69,6 +126,7 @@ bool FFN::build_from_dictionary_array(const Array &layer_dicts, int loss_type) {
     input_dims = layers.front().in_dims;
     output_dims = layers.back().out_dims;
 
+
     if (static_cast<LOSS>(loss_type) == LOSS::CROSSENTROPY) {
         backend = std::make_unique<ModelBackend<mlpack::SigmoidCrossEntropyError>>(layers);
     } else if (static_cast<LOSS>(loss_type) == LOSS::NEGATIVELOGLIKELIHOOD) {
@@ -80,15 +138,55 @@ bool FFN::build_from_dictionary_array(const Array &layer_dicts, int loss_type) {
     return true;
 }
 
+bool FFN::add(int layer_id, size_t out_dims, int activation, 
+                    int kernel_w, int kernel_h, int stride_w, int stride_h,
+                    int pad_w, int pad_h, bool floor,
+                    int input_width, int input_height, int input_channels) {
+    Dictionary layer;
+    layer["layer_id"] = static_cast<LAYER>(layer_id);
+    layer["in_dims"] = 0;
+    layer["out_dims"] = out_dims;
+    
+    if (layer_id == CONV2D_LAYER || layer_id == MAXPOOL2D_LAYER) {
+        layer["kernel_w"] = kernel_w;
+        layer["kernel_h"] = kernel_h;
+        layer["stride_w"] = stride_w;
+        layer["stride_h"] = stride_h;
+        layer["pad_w"] = pad_w;
+        layer["pad_h"] = pad_h;
+        layer["floor"] = floor;
+        layer["input_width"] = input_width;
+        layer["input_height"] = input_height;
+        layer["input_channels"] = input_channels;
+    }
+
+    FFN::layer_dict_build.append(layer);
+    if (activation != NONE) {
+        Dictionary activation_layer;
+        activation_layer["layer_id"] = ACTIVATION_LAYER;
+        activation_layer["activation"] = static_cast<ACTIVATION>(activation);
+        FFN::layer_dict_build.append(activation_layer);
+    }
+    return true;
+}
+
+bool FFN::build(int loss_type) {
+    if (FFN::layer_dict_build.is_empty()) { 
+        UtilityFunctions::print(" build(): Layers are not set for building");
+        return false; 
+    }
+    return FFN::build_from_dictionary_array(FFN::layer_dict_build, loss_type);
+}
+
 void FFN::train(const TypedArray<PackedFloat32Array> &inputs, const TypedArray<PackedFloat32Array> &targets,
                      bool use_optimizer, int epochs, double learning_rate, double beta1, double beta2, int batch_size,
                      bool print_loss, int print_every, double tolerance, bool shuffle) {
     if (!backend) {
-        UtilityFunctions::print("FFN::train called before build");
+        UtilityFunctions::print(" train(): train called before build");
         return;
     }
     if (inputs.size() == 0 || inputs.size() != targets.size()) {
-        UtilityFunctions::print("FFN::train: inputs/targets size mismatch");
+        UtilityFunctions::print(" train(): inputs/targets size mismatch");
         return;
     }
 
@@ -126,14 +224,14 @@ void FFN::train(const TypedArray<PackedFloat32Array> &inputs, const TypedArray<P
         backend->Train(X, Y, config, use_optimizer);
     } catch (std::exception &e) {
         String e_id(e.what());
-        UtilityFunctions::print("MODEL: ", e_id);
+        UtilityFunctions::print(" train(): ", e_id);
     }
 } 
 
 PackedFloat32Array FFN::predict(const PackedFloat32Array &input) {
     PackedFloat32Array result;
     if (!backend) {
-        UtilityFunctions::print("FFN::predict called before build");
+        UtilityFunctions::print(" predict(): predict called before build");
         return result;
     }
 
@@ -164,16 +262,72 @@ bool FFN::load_model(const String &path, int loss_type) {
     std::vector<LayerNode> empty_layers;
     if (static_cast<LOSS>(loss_type) == LOSS::CROSSENTROPY) {
         backend = std::make_unique<ModelBackend<mlpack::CrossEntropyError>>(empty_layers);
+    } else if (static_cast<LOSS>(loss_type) == LOSS::NEGATIVELOGLIKELIHOOD) {
+        backend = std::make_unique<ModelBackend<mlpack::NegativeLogLikelihood>>(empty_layers);
     } else {
         backend = std::make_unique<ModelBackend<mlpack::MeanSquaredError>>(empty_layers);
     }
     return backend->Load(std::string(path.utf8().get_data()));
 }
+
+String FFN::summary() {
+    std::string s = "model\n";
+    for (int i = 0; i < FFN::layer_dict_build.size(); ++i) {
+        Dictionary d = FFN::layer_dict_build[i];
+        int id = static_cast<int>(d["layer_id"]);
+        size_t out_dims = static_cast<size_t>(d["out_dims"]);
+        if (id == LINEAR_LAYER) {
+            s += std::format(" -linear({})\n", out_dims);
+        } else if (id == CONV2D_LAYER) {
+            size_t kw = static_cast<size_t>(d.get("kernel_w", 3));
+            size_t kh = static_cast<size_t>(d.get("kernel_h", 3));
+            size_t sw = static_cast<size_t>(d.get("stride_w", 1));
+            size_t sh = static_cast<size_t>(d.get("stride_h", 1));
+            size_t pw = static_cast<size_t>(d.get("pad_w", 0));
+            size_t ph = static_cast<size_t>(d.get("pad_h", 0));
+            s += std::format(" -conv2d({}, {}, {}, {}, {}, {})\n", kw, kh, sw, sh, pw, ph);
+        } else if (id == MAXPOOL2D_LAYER) {
+            size_t kw = static_cast<size_t>(d.get("kernel_w", 3));
+            size_t kh = static_cast<size_t>(d.get("kernel_h", 3));
+            size_t sw = static_cast<size_t>(d.get("stride_w", 1));
+            size_t sh = static_cast<size_t>(d.get("stride_h", 1));
+            bool floor = static_cast<bool>(d.get("floor", true));
+            s += std::format(" -maxpool2d({}, {}, {}, {}, ", kw, kh, sw, sh);
+            if (floor) { s += "true)\n"; }
+            else { s += "false)\n"; }
+        } else if (id == ACTIVATION_LAYER) {
+            int act = d.get("activation", NONE);
+            switch (act) {
+                case ACTIVATION::RELU:
+                    s += " -relu\n";
+                    break;
+                case ACTIVATION::TANH:
+                    s += " -tanh\n";
+                    break;
+                case ACTIVATION::SOFTMAX:
+                    s += " -softmax\n";
+                    break;
+                case ACTIVATION::SIGMOID:
+                    s += " -sigmoid\n";
+                    break;
+                case ACTIVATION::LEAKYRELU:
+                    s += " -leakyrelu\n";
+                    break;
+                case ACTIVATION::LOGSOFTMAX:
+                    s += " -logsoftmax\n";
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    return String(s.c_str());
+}
 PackedFloat32Array FFN::image_to_packedarray(const Ref<Image> &image, int channels) {
     PackedFloat32Array result;
 
     if (image.is_null()) {
-        UtilityFunctions::print("FFN::image_to_packedarray: image is null");
+        UtilityFunctions::print(" image_to_packedarray(): image is null");
         return result;
     }
 
@@ -190,7 +344,7 @@ PackedFloat32Array FFN::image_to_packedarray(const Ref<Image> &image, int channe
             img->convert(Image::FORMAT_RGBA8);
             break;
         default:
-            UtilityFunctions::print("FFN::image_to_packedarray: unsupported channel count ", channels, " (expected 1, 3, or 4)");
+            UtilityFunctions::print(" image_to_packedarray(): unsupported channel count ", channels, " (expected 1, 3, or 4)");
             return result;
     }
 
@@ -211,6 +365,7 @@ PackedFloat32Array FFN::image_to_packedarray(const Ref<Image> &image, int channe
                     case 3: value = pixel.a; break;
                     default: value = 0.0f;
                 }
+                // Column-major cube layout: width fastest, height next, channel slowest.
                 int index = x + y * width + ch * width * height;
                 result[index] = value;
             }
@@ -219,3 +374,4 @@ PackedFloat32Array FFN::image_to_packedarray(const Ref<Image> &image, int channe
 
     return result;
 }
+

@@ -26,9 +26,9 @@ class GodotLossCallback {
     bool EndEpoch(OptimizerType & /*optimizer*/, FunctionType & /*function*/,
                   const MatType & /*coordinates*/, size_t epoch, double objective) {
         if (enabled && (epoch % print_every == 0)) {
-            UtilityFunctions::print("[AirNN] epoch ", static_cast<int64_t>(epoch), " loss ", objective);
+            UtilityFunctions::print("  epoch ", static_cast<int64_t>(epoch), " loss ", objective);
         }
-        return true;
+        return false;
     }
 
   private:
@@ -124,14 +124,22 @@ class ModelBackend: public IModelBackend {
                 config.tolerance,
                 config.shuffle
             );
-            GodotLossCallback callback(config.print_loss, config.print_every);
+            if (config.print_loss) {
+                GodotLossCallback callback(config.print_loss, config.print_every);
+                network.Train(inputs, targets, optimizer, callback);
+            } else {
+                network.Train(inputs, targets, optimizer);
+            }
 
-            network.Train(inputs, targets, optimizer, callback);
         } else {
             network.Train(inputs, targets);
+            if (config.print_loss) {
+                double final_loss = network.Evaluate(inputs, targets);
+                UtilityFunctions::print("  fit complete, final loss ", final_loss);
+            }
         }
     } catch (std::exception &e) {
-        UtilityFunctions::print("BACKEND", String(e.what()));
+        UtilityFunctions::print("BACKEND: ", String(e.what()));
     }
     }
     void Predict(const arma::mat &input, arma::mat &output) override {
@@ -146,6 +154,7 @@ class ModelBackend: public IModelBackend {
         bool success = mlpack::Load(path, network);
         return success;
     }
+
     private:
     mlpack::FFN<LossT, mlpack::RandomInitialization> network;
 };
